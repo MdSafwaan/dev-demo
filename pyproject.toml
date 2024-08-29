@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "python-coding"
+version = "0.1.0"
+description = "A Python coding challenge application using FastAPI and GPT-4"
+authors = ["MOHAMMED SAFWAN A <mohammedsafwan448@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.100.0"
+uvicorn = "^0.22.0"
+jinja2 = "^3.1.2"
+python-multipart = "^0.0.6"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-dotenv = "^1.0.0"
+openai = "^1.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

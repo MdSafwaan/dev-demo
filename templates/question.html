@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full">
+    <div class="flex justify-between items-start mb-6">
+        <h1 class="text-3xl font-bold">Question {{ question_number }} of {{ total_questions }}</h1>
+        <div id="timer" class="text-2xl font-bold text-red-600 p-2 bg-red-100 rounded">30</div>
+    </div>
+
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Question:</h2>
+        <p class="mb-4">{{ question.question }}</p>
+    </div>
+
+    <form action="{% if is_last_question %}/finish-quiz{% else %}/submit-code{% endif %}" method="post" id="codeForm">
+        <input type="hidden" name="username" value="{{ username }}">
+        <input type="hidden" name="question_id" value="{{ question.id }}">
+
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold mb-2">Your Code:</h2>
+            <div id="editor" style="width:100%;height:200px;border:1px solid grey"></div>
+        </div>
+
+        <input type="hidden" name="code" id="hiddenCode">
+        <input type="hidden" name="score" id="hiddenScore">
+        <div class="flex justify-between">
+            <button type="submit" class="{% if is_last_question %}bg-green-500 hover:bg-green-600{% else %}bg-blue-500 hover:bg-blue-600{% endif %} text-white px-4 py-2 rounded-lg font-semibold transition duration-300">
+                {% if is_last_question %}Finish DevChallenge{% else %}Submit{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        var editor = monaco.editor.create(document.getElementById('editor'), {
+            value: `{{ question.function_start | safe }}`,
+            language: 'python',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            readOnly: false,
+            contextmenu: false
+        });
+
+        // Disable copy and paste
+        editor.onKeyDown(function(e) {
+            // Prevent Ctrl+C, Ctrl+V, Ctrl+X
+            if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyC' || e.code === 'KeyV' || e.code === 'KeyX')) {
+                e.preventDefault();
+            }
+        });
+
+        // Disable right-click context menu
+        document.getElementById('editor').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        const form = document.getElementById('codeForm');
+        const timerElement = document.getElementById('timer');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitCode();
+        });
+
+        // Timer and scoring functionality
+        let timeLeft = 30;
+        let currentScore = 30;
+        let timerInterval;
+
+        function updateTimerAndScore() {
+            timerElement.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                submitCode();
+            } else {
+                timeLeft--;
+                currentScore = Math.max(0, timeLeft);
+            }
+        }
+
+        function submitCode() {
+            document.getElementById('hiddenCode').value = editor.getValue();
+            document.getElementById('hiddenScore').value = currentScore;
+            form.submit();
+        }
+
+        timerInterval = setInterval(updateTimerAndScore, 1000);
+
+        // Update current code every 5 seconds
+        setInterval(function() {
+            fetch('/update-current-code', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({
+                    'username': '{{ username }}',
+                    'code': editor.getValue(),
+                    'score': currentScore
+                })
+            }).then(response => {
+                if (timeLeft <= 0) {
+                    submitCode();
+                }
+            }).catch(error => {
+                console.error('Error updating code:', error);
+            });
+        }, 5000);
+    });
+</script>
+{% endblock %}
